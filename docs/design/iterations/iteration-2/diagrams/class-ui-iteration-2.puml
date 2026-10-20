@@ -1,91 +1,119 @@
 @startuml
-title CUI 类图 — Iteration 2（最终）
+title CUI 菜单与界面类图 — Iteration 2（最终）
 skinparam classAttributeIconSize 0
+skinparam defaultFontName "Microsoft YaHei"
+skinparam defaultFontSize 11
+skinparam wrapWidth 170
+skinparam nodesep 26
+skinparam ranksep 36
 hide empty members
+hide circle
+left to right direction
 
-interface MenuAction {
-  + execute(): void
-}
-
-class MenuItem {
-  - key: String
-  - label: String
-  - action: MenuAction
-  + matches(String): boolean
-  + execute(): void
-  + getKey(): String
-  + getLabel(): String
-}
-
-class Menu {
-  - title: String
-  - items: List<MenuItem>
-  + addItem(String, String, MenuAction): void
-  + run(ConsoleIO): void
-  - display(): void
-}
-
-class ConsoleIO {
-  + readLine(String): String
-  + readPassword(String): String
-  + readInt(String, int, int): int
-  + readDouble(String, double, double): double
-  + confirm(String): boolean
-  + print(String): void
-  + println(String): void
+package "ui.menu" {
+  interface MenuAction {
+    + execute(): void
+  }
+  class MenuItem {
+    - key: String
+    - label: String
+    - action: MenuAction
+    + matches(String): boolean
+    + execute(): void
+    + getKey(): String
+    + getLabel(): String
+  }
+  class Menu {
+    - title: String
+    - items: List<MenuItem>
+    + setZeroLabel(String): void
+    + addItem(String, String, MenuAction): void
+    + run(ConsoleIO): void
+    - display(): void
+  }
 }
 
-class TablePrinter {
-  + printTable(List<String[]>, String[]): void
-  + page(List<T>, int, int): List<T>
-  + pageCount(int, int): int
+package "ui" {
+  class ConsoleIO {
+    + readLine(String): String
+    + readCommand(String): String
+    + readPassword(String): String
+    + readInt(String, int, int): int
+    + readDouble(String, double, double): double
+    + readRequired(String, String): String
+    + confirm(String): boolean
+    + print(String): void
+    + println(String): void
+    + println(): void
+  }
+  class TablePrinter {
+    + printTable(List<String[]>, String[]): void
+    + showPaged(List<String[]>, String[], ConsoleIO): void
+    + page(List<T>, int, int): List<T>
+    + pageCount(int, int): int
+  }
+  interface MenuFactory {
+    + createMenu(Session): Menu
+  }
+  class AdminMenuFactory implements MenuFactory {
+    + createMenu(Session): Menu
+  }
+  class TeacherMenuFactory implements MenuFactory {
+    + createMenu(Session): Menu
+  }
+  class LoginUI {
+    + run(): void
+  }
 }
 
-class LoginUI {
-  + run(): void
-}
-
-interface MenuFactory {
-  + createMenu(Session): Menu
-}
-
-class AdminMenuFactory implements MenuFactory {
-  + createMenu(Session): Menu
-}
-
-class TeacherMenuFactory implements MenuFactory {
-  + createMenu(Session): Menu
-}
-
-class DepartmentUI {
-  + show(): void
-}
-class EmployeeUI {
-  + show(): void
-}
-class CourseUI {
-  + show(): void
-}
-class ClassUI {
-  + show(): void
-}
-class TeachingUI {
-  + show(): void
-}
-class StudentUI {
-  + show(): void
-}
-class ScoreUI {
-  + show(): void
-}
-class StatisticsUI {
-  + show(): void
-}
-class WarningUI {
-  + show(): void
-}
-class AccountUI {
-  + show(): void
+package "ui.view" {
+  class DepartmentUI {
+    + show(): void
+  }
+  class EmployeeUI {
+    + show(): void
+  }
+  class CourseUI {
+    + show(): void
+  }
+  class ClassUI {
+    + show(): void
+  }
+  class TeachingUI {
+    + show(): void
+  }
+  class StudentUI {
+    + show(): void
+  }
+  class ScoreUI {
+    + show(): void
+  }
+  class StatisticsUI {
+    + show(): void
+    + showClassStatistics(): void
+    + showStudentStatistics(): void
+  }
+  class WarningUI {
+    + show(): void
+  }
+  class AccountUI {
+    + show(): void
+    + showProfile(): void
+  }
+  class UiSupport {
+    + parseGender(String, Gender): Gender
+    + parseRole(String): Role
+    + parseEmployeeStatus(String): EmployeeStatus
+    + parseStudentStatus(String): StudentStatus
+    + parseClassStatus(String): ClassStatus
+    + readId(ConsoleIO, String, String): Long
+    + text(String): String
+    + formatScore(Double): String
+    + formatRate(Double): String
+    + levelText(WarningLevel): String
+    + classLevelText(ClassWarningLevel): String
+    + parseLevelFilter(String): String
+  }
 }
 
 package "service（详见服务类图）" {
@@ -102,14 +130,16 @@ package "service（详见服务类图）" {
   class Session
 }
 
-Menu "1" *-- "0..*" MenuItem
-MenuItem --> MenuAction
+Menu "1" *-- "0..*" MenuItem : items
+MenuItem --> MenuAction : action
 Menu --> ConsoleIO
+
 LoginUI --> AuthService
-LoginUI --> MenuFactory : 按角色选择实现
 LoginUI --> ConsoleIO
+LoginUI --> MenuFactory : 按登录角色选择实现
 
 AdminMenuFactory --> Session
+AdminMenuFactory --> ConsoleIO
 AdminMenuFactory --> DepartmentUI
 AdminMenuFactory --> EmployeeUI
 AdminMenuFactory --> CourseUI
@@ -122,8 +152,10 @@ AdminMenuFactory --> WarningUI
 AdminMenuFactory --> AccountUI
 
 TeacherMenuFactory --> Session
-TeacherMenuFactory --> CourseUI : 只读
-TeacherMenuFactory --> TeachingUI
+TeacherMenuFactory --> ConsoleIO
+TeacherMenuFactory --> CourseUI : 只读目录
+TeacherMenuFactory --> ClassUI
+TeacherMenuFactory --> StudentUI
 TeacherMenuFactory --> ScoreUI
 TeacherMenuFactory --> StatisticsUI
 TeacherMenuFactory --> WarningUI
@@ -131,48 +163,91 @@ TeacherMenuFactory --> AccountUI
 
 DepartmentUI --> DepartmentService
 DepartmentUI --> ConsoleIO
+DepartmentUI --> TablePrinter
 EmployeeUI --> EmployeeService
+EmployeeUI --> DepartmentService
 EmployeeUI --> ConsoleIO
+EmployeeUI --> TablePrinter
 CourseUI --> CourseService
 CourseUI --> ConsoleIO
+CourseUI --> TablePrinter
+CourseUI --> Session
 ClassUI --> ClassService
+ClassUI --> StudentService
+ClassUI --> TeachingService
+ClassUI --> CourseService
+ClassUI --> EmployeeService
 ClassUI --> ConsoleIO
+ClassUI --> TablePrinter
+ClassUI --> Session
 TeachingUI --> TeachingService
+TeachingUI --> ClassService
+TeachingUI --> CourseService
+TeachingUI --> EmployeeService
+TeachingUI --> ScoreService
 TeachingUI --> ConsoleIO
+TeachingUI --> TablePrinter
+TeachingUI --> Session
 StudentUI --> StudentService
+StudentUI --> ClassService
 StudentUI --> ConsoleIO
+StudentUI --> TablePrinter
+StudentUI --> Session
 ScoreUI --> ScoreService
+ScoreUI --> ClassService
+ScoreUI --> TeachingService
+ScoreUI --> StudentService
+ScoreUI --> CourseService
+ScoreUI --> EmployeeService
 ScoreUI --> ConsoleIO
+ScoreUI --> TablePrinter
 StatisticsUI --> StatisticsService
+StatisticsUI --> ClassService
+StatisticsUI --> StudentService
 StatisticsUI --> ConsoleIO
+StatisticsUI --> TablePrinter
 WarningUI --> WarningService
+WarningUI --> ClassService
+WarningUI --> StudentService
 WarningUI --> ConsoleIO
+WarningUI --> TablePrinter
 AccountUI --> AuthService
+AccountUI --> EmployeeService : 本人资料
+AccountUI --> DepartmentService : 部门名称
 AccountUI --> ConsoleIO
+AccountUI --> TablePrinter
 
 note right of MenuFactory
-  第 2 轮拆分为接口 + 两个实现，
+  第 2 轮拆成“接口 + 两个实现”，
   消除单个 MenuFactory 随功能增长
-  而膨胀的上帝类风险。
-  组合根创建两个实现；
-  LoginUI 按登录角色选择。
+  膨胀成上帝类的风险（D-04）。
 end note
 
 note bottom of CourseUI
-  管理员：UC-06 课程 CRUD；
+  管理员：UC-06 课程增删改查；
   教师：UC-06a 只读课程目录。
-  权限仍由 CourseService/Session 校验。
+  权限仍由 CourseService + Session 校验。
 end note
 
 note bottom of ConsoleIO
-  UI 只做输入格式校验与结果打印；
-  业务校验在 service。
+  UI 只做输入格式校验与结果打印，
+  业务校验全部在 service 层。
 end note
 
 note bottom of TablePrinter
-  分页在 UI 层：service 返回完整列表，
-  TablePrinter 按 page/pageSize 切片。
-  先过滤、排序，再分页；每页默认 10 条。
+  先过滤、排序，再分页，每页默认 10 条；
+  showPaged 把分页与表格输出合成一步。
+end note
+
+note bottom of AccountUI
+  show()：UC-03 修改本人密码；
+  showProfile()：UC-16 查看本人资料（只读，
+  不显示密码哈希/盐，也不能改角色与状态）。
+end note
+
+note right of UiSupport
+  统一枚举解析、ID 读取与输出格式化，
+  避免 10 个 XxxUI 各写一份重复代码（D-07）。
 end note
 
 @enduml

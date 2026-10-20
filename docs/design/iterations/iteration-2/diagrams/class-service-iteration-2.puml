@@ -1,7 +1,13 @@
 @startuml
-title 服务类图 — Iteration 2（最终）
+title 服务、会话与权限类图 — Iteration 2（最终）
 skinparam classAttributeIconSize 0
+skinparam defaultFontName "Microsoft YaHei"
+skinparam defaultFontSize 11
+skinparam wrapWidth 170
+skinparam nodesep 30
+skinparam ranksep 40
 hide empty members
+hide circle
 left to right direction
 
 package "service" {
@@ -38,8 +44,8 @@ package "service" {
 
   class EmployeeService {
     + search(String, Long, Role, EmployeeStatus): List<Employee>
-    + create(...): Employee
-    + update(long, ...): void
+    + create(String, String, String, Gender, String, String, long, Role, LocalDate): Employee
+    + update(long, String, String, Gender, String, String, long, Role): void
     + delete(long): void
     + changeStatus(long, EmployeeStatus): void
     + changeRole(long, Role): void
@@ -58,8 +64,8 @@ package "service" {
   class ClassService {
     + list(): List<SchoolClass>
     + filter(String, ClassStatus, Long): List<SchoolClass>
-    + create(...): SchoolClass
-    + update(long, ...): void
+    + create(String, String, Long, LocalDate, LocalDate, int): SchoolClass
+    + update(long, String, String, Long, LocalDate, LocalDate, int): void
     + delete(long): void
     + changeStatus(long, ClassStatus): void
     + assignHeadTeacher(long, Long): void
@@ -77,8 +83,8 @@ package "service" {
     + list(): List<Student>
     + search(String, Long, StudentStatus): List<Student>
     + listByClass(long): List<Student>
-    + create(...): Student
-    + update(long, ...): void
+    + create(String, String, Gender, String, long, LocalDate): Student
+    + update(long, String, Gender, String): void
     + delete(long): void
     + transfer(long, long): void
     + changeStatus(long, StudentStatus): void
@@ -108,18 +114,16 @@ package "service" {
   }
 }
 
-package "dto（详见 DTO 类图）" {
-  class ClassStatistics
-  class CourseStatistics
-  class StudentStatistics
-  class ScoreDetail
-  class RankEntry
-  class StudentMetrics
-  class WarningResult
-  class ClassWarning
-  enum WarningLevel
-  enum ClassWarningLevel
-  enum DataStatus
+package "persistence（契约）" {
+  interface "Repository<T extends Identifiable>" as Repository {
+    + findAll(): List<T>
+    + findById(long): Optional<T>
+    + save(T): T
+    + delete(long): void
+    + saveAll(): void
+    + findAll(Predicate<T>): List<T>
+    + findFirst(Predicate<T>): Optional<T>
+  }
 }
 
 package "model（详见领域类图）" {
@@ -132,42 +136,48 @@ package "model（详见领域类图）" {
   class Score
 }
 
-package "persistence（接口）" {
-  interface "Repository<T extends Identifiable>" as Repository {
-    + findAll(): List<T>
-    + findById(long): Optional<T>
-    + save(T): T
-    + delete(long): void
-    + saveAll(): void
-  }
+package "dto（详见 DTO 类图）" {
+  class ClassStatistics
+  class CourseStatistics
+  class StudentStatistics
+  class RankEntry
+  class StudentMetrics
+  class WarningResult
+  class ClassWarning
 }
 
-class PasswordHasher
+package "util" {
+  class PasswordHasher
+}
 
 ' 会话与权限
 AuthService --> Session
 AuthService --> PasswordHasher
 Session --> ClassCourse : canAccess / filter
 
-' 每个 service 通过构造器接收所需的 Repository<T>；这里用一条依赖表示，
-' 具体仓储组合见 architecture-design.md 第 4.2 节。
+' 仓储依赖：每个 service 只依赖 Repository<T> 接口
 AuthService --> Repository : Employee
 DepartmentService --> Repository : Department / Employee
 EmployeeService --> Repository : Employee / Department / SchoolClass / ClassCourse
-EmployeeService --> PasswordHasher
-EmployeeService --> Session
 CourseService --> Repository : Course / ClassCourse / Score
-CourseService --> Session : 写操作 requireAdmin
 ClassService --> Repository : SchoolClass / Employee / Student / ClassCourse / Score
 TeachingService --> Repository : ClassCourse / SchoolClass / Course / Employee / Score
 StudentService --> Repository : Student / SchoolClass / ClassCourse / Score
-StudentService --> Session
 ScoreService --> Repository : Score / Student / ClassCourse / SchoolClass
-ScoreService --> Session
 StatisticsService --> Repository : Student / SchoolClass / ClassCourse / Score / Course / Employee
+WarningService --> Repository : Student / SchoolClass / ClassCourse
+
+' 权限依赖（D-01 / D-02 / D-03）
+DepartmentService --> Session : requireAdmin
+ClassService --> Session : requireAdmin
+TeachingService --> Session : requireAdmin
+EmployeeService --> Session
+StudentService --> Session
+ScoreService --> Session
 StatisticsService --> Session
-WarningService --> StatisticsService
 WarningService --> Session
+
+WarningService --> StatisticsService : 复用指标计算
 
 StatisticsService ..> ClassStatistics
 StatisticsService ..> CourseStatistics
@@ -176,8 +186,6 @@ StatisticsService ..> RankEntry
 StatisticsService ..> StudentMetrics
 WarningService ..> WarningResult
 WarningService ..> ClassWarning
-WarningService ..> WarningLevel
-WarningService ..> ClassWarningLevel
 
 note right of Repository
   service 只依赖 Repository<T> 接口；
@@ -187,25 +195,33 @@ end note
 
 note bottom of StatisticsService
   按 Session 的可见范围聚合成绩；
-  转班学生旧成绩留在原 ClassCourse。
+  转班学生的旧成绩仍在原 ClassCourse。
 end note
 
 note bottom of WarningService
-  评估 R1–R6，收集全部命中，
-  取最高等级；无成绩为“数据不足”。
+  评估 R1–R6 并收集全部命中规则，
+  取最高等级；无可见成绩为“数据不足”。
+  除 StatisticsService 与 Session 外，
+  还直接依赖 3 个仓储（D-02）。
 end note
 
 note right of ScoreService
   唯一键 (studentId, courseId)：
   由 classCourseId 解析 courseId；
   已有成绩则更新原记录，
-  不因转班新建重复成绩。
+  不因转班产生重复成绩。
 end note
 
 note bottom of CourseService
   list() 供 UC-06a 使用；
-  教师只读，增删改仍由
-  service 校验管理员权限。
+  教师只读，增删改由
+  requireAdmin() 校验。
+end note
+
+note bottom of Session
+  权限判断的唯一入口：
+  控制器不再自行比较角色，
+  一律通过 requireAdmin / canAccess。
 end note
 
 @enduml

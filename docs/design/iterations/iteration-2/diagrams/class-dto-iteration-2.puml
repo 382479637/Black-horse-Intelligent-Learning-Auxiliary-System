@@ -1,10 +1,16 @@
 @startuml
-title 统计与预警 DTO — Iteration 2（最终）
+title 统计与预警 DTO 类图 — Iteration 2（最终）
 skinparam classAttributeIconSize 0
+skinparam defaultFontName "Microsoft YaHei"
+skinparam defaultFontSize 11
+skinparam wrapWidth 165
+skinparam nodesep 30
+skinparam ranksep 40
 hide empty members
-left to right direction
+hide circle
+top to bottom direction
 
-package "dto" {
+package "dto · 统计" {
   class ClassStatistics <<record>> {
     + classId: long
     + className: String
@@ -64,6 +70,9 @@ package "dto" {
     + average: Double
     + failedCount: Integer
   }
+}
+
+package "dto · 预警" {
   class WarningResult <<record>> {
     + studentId: long
     + studentNo: String
@@ -93,6 +102,9 @@ package "dto" {
     NORMAL
     INSUFFICIENT_DATA
   }
+}
+
+package "dto · 通用" {
   enum DataStatus {
     AVAILABLE
     INSUFFICIENT
@@ -109,28 +121,30 @@ ClassWarning --> ClassWarningLevel
 
 note bottom of ClassStatistics
   班级统计聚合各门课程统计。
-  studentCount 为全班学生数，
+  studentCount 是全班人数，
   不受教师可见课程范围影响。
-  dataStatus=INSUFFICIENT 时，
-  四个指标为 null，UI 显示“数据不足”。
+  dataStatus = INSUFFICIENT 时
+  四个指标为 null，界面显示“数据不足”。
 end note
 
 note bottom of StudentStatistics
-  scoreCount 为可见范围内成绩数；
-  rank 为空表示无排名；
-  rankNote 给出“无排名（本班暂无成绩）”等原因。
+  scoreCount 是可见范围内的成绩条数；
+  rank 为空表示不参与排名，
+  rankNote 给出原因（如本班暂无成绩）。
 end note
 
 note bottom of WarningResult
-  评估 R1–R6，收集全部命中，
-  取最高等级；无成绩为“数据不足”。
-  INSUFFICIENT_DATA 时 average/failedCount 为 null。
+  评估 R1–R6 并收集全部命中规则，
+  取最高等级输出；
+  无可见成绩时 level = INSUFFICIENT_DATA，
+  average / failedCount 为 null。
 end note
 
 note bottom of DataStatus
   AVAILABLE：有可见成绩，指标可读；
   INSUFFICIENT：无可见成绩，指标不适用。
-  所有 List 字段在 record 构造器中 List.copyOf，
+  所有 List 字段在 record 构造器中
+  用 List.copyOf 转成不可变副本。
   空列表表示“没有明细”，不是“数据不足”。
 end note
 

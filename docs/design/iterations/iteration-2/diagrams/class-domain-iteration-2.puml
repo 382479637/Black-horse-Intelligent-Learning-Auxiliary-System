@@ -1,7 +1,14 @@
 @startuml
 title 领域模型类图 — Iteration 2（最终）
 skinparam classAttributeIconSize 0
+skinparam defaultFontName "Microsoft YaHei"
+skinparam defaultFontSize 11
+skinparam wrapWidth 180
+skinparam nodesep 35
+skinparam ranksep 45
 hide empty members
+hide circle
+top to bottom direction
 
 interface Identifiable {
   + getId(): long
@@ -35,16 +42,23 @@ class Employee extends Person {
   - role: Role
   - status: EmployeeStatus
   - hireDate: LocalDate
+  + getUsername(): String
+  + getEmail(): String
+  + getDepartmentId(): long
+  + getRole(): Role
+  + getStatus(): EmployeeStatus
+  + getHireDate(): LocalDate
+  + getPasswordHash(): String
+  + getPasswordSalt(): String
   + isAdmin(): boolean
   + isActive(): boolean
   + canTeach(): boolean
-  + getEmail(): String
+  + updateUsername(String): void
   + updateEmail(String): void
+  + updateDepartment(long): void
   + updatePassword(String, String): void
   + changeStatus(EmployeeStatus): void
   + changeRole(Role): void
-  + getPasswordSalt(): String
-  + getPasswordHash(): String
 }
 
 class Student extends Person {
@@ -52,6 +66,10 @@ class Student extends Person {
   - classId: long
   - enrollmentDate: LocalDate
   - status: StudentStatus
+  + getStudentNo(): String
+  + getClassId(): long
+  + getEnrollmentDate(): LocalDate
+  + getStatus(): StudentStatus
   + isActive(): boolean
   + transferTo(long): void
   + changeStatus(StudentStatus): void
@@ -60,6 +78,8 @@ class Student extends Person {
 class Department extends AbstractEntity {
   - name: String
   - description: String
+  + getName(): String
+  + getDescription(): String
   + rename(String): void
   + updateDescription(String): void
 }
@@ -68,6 +88,9 @@ class Course extends AbstractEntity {
   - code: String
   - name: String
   - description: String
+  + getCode(): String
+  + getName(): String
+  + getDescription(): String
   + update(String, String, String): void
 }
 
@@ -79,6 +102,13 @@ class SchoolClass extends AbstractEntity {
   - endDate: LocalDate
   - capacity: int
   - status: ClassStatus
+  + getCode(): String
+  + getName(): String
+  + getHeadTeacherId(): Long
+  + getStartDate(): LocalDate
+  + getEndDate(): LocalDate
+  + getCapacity(): int
+  + getStatus(): ClassStatus
   + isFull(int): boolean
   + canAcceptStudent(): boolean
   + isFinished(): boolean
@@ -92,6 +122,10 @@ class ClassCourse extends AbstractEntity {
   - courseId: long
   - teacherId: Long
   - createdAt: LocalDateTime
+  + getClassId(): long
+  + getCourseId(): long
+  + getTeacherId(): Long
+  + getCreatedAt(): LocalDateTime
   + isAssigned(): boolean
   + assignTeacher(Long): void
   + unassignTeacher(): void
@@ -102,6 +136,10 @@ class Score extends AbstractEntity {
   - classCourseId: long
   - score: double
   - updatedAt: LocalDateTime
+  + getStudentId(): long
+  + getClassCourseId(): long
+  + getScore(): double
+  + getUpdatedAt(): LocalDateTime
   + isPassed(): boolean
   + updateScore(double, LocalDateTime): void
 }
@@ -135,44 +173,50 @@ enum StudentStatus {
   GRADUATED
 }
 
-' 多重性读法：左端描述右侧实例可关联的左侧实例数；
-' 右端描述左侧实例可关联的右侧实例数。
+' 多重性读法：左端数字描述右侧对象可关联的左侧对象数量，右端数字反之
 Department "1" -- "0..*" Employee : employs >
 SchoolClass "0..*" -- "0..1" Employee : headTeacher >
 ClassCourse "0..*" -- "0..1" Employee : teacher >
 
 SchoolClass "1" *-- "0..*" ClassCourse : offers >
-Course "1" -- "0..*" ClassCourse : referenced by >
-SchoolClass "1" -- "0..*" Student : current class >
+Course "1" -- "0..*" ClassCourse : referencedBy >
+SchoolClass "1" -- "0..*" Student : currentClass >
 Student "1" *-- "0..*" Score : owns >
-ClassCourse "1" -- "0..*" Score : assessed by >
+ClassCourse "1" -- "0..*" Score : assessedBy >
+
+Employee --> Role
+Employee --> EmployeeStatus
+Person --> Gender
+Student --> StudentStatus
+SchoolClass --> ClassStatus
 
 note right of ClassCourse
-  teacherId 可空；为空表示“待分配”。
-  classId/courseId 创建后不可变。
+  teacherId 为 Long 且可空，
+  空表示“待分配”；
+  classId / courseId 创建后不可变。
 end note
 
 note right of Score
   classCourseId 创建后不可变；
-  学生转班不迁移历史成绩。
+  学生转班不迁移历史成绩；
   唯一键为 (studentId, courseId)，
-  courseId 经 ClassCourse 解析。
+  courseId 由 classCourseId 解析。
 end note
 
 note bottom of Student
-  Score 的唯一组合拥有者是 Student：
-  删除普通学生时级联删除成绩；
-  归档保护状态下禁止删除学生。
+  Score 的唯一组合拥有者：
+  删除学生时级联删除其成绩；
+  FINISHED 归档保护下禁止删除。
 end note
 
-note bottom of ClassCourse
-  ClassCourse 不是 Score 的组合拥有者：
-  有成绩时不得移除教学任务；
-  成绩只通过 classCourseId 引用它。
+note bottom of AbstractEntity
+  所有实体都提供“带 id 的构造器”，
+  仅供 CSV 重建使用（D-06）；
+  业务代码一律用不带 id 的构造器。
 end note
 
 note right of SchoolClass
-  status: PLANNED / ACTIVE / FINISHED。
+  status: PLANNED → ACTIVE → FINISHED，
   FINISHED 为结业归档终态。
 end note
 

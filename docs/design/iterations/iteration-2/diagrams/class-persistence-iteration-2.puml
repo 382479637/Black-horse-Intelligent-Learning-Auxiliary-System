@@ -1,7 +1,13 @@
 @startuml
-title 持久化类图 — Iteration 2（最终）
+title 持久化、工具与异常类图 — Iteration 2（最终）
 skinparam classAttributeIconSize 0
+skinparam defaultFontName "Microsoft YaHei"
+skinparam defaultFontSize 11
+skinparam wrapWidth 170
+skinparam nodesep 28
+skinparam ranksep 38
 hide empty members
+hide circle
 left to right direction
 
 package "persistence" {
@@ -27,7 +33,11 @@ package "persistence" {
     - file: Path
     - codec: CsvCodec<T>
     - store: Map<Long,T>
+    - lineNumbers: Map<Long,Integer>
     - nextId: long
+    + file(): Path
+    + header(): String[]
+    + lineOf(long): int
     + load(LoadDiagnostics): void
     + findAll(): List<T>
     + findById(long): Optional<T>
@@ -40,8 +50,11 @@ package "persistence" {
 
   class DataLoader {
     + loadAll(): void
-    - validateReferences(): void
-    - removeInvalid(...): void
+    - validateEmployees(): void
+    - validateClasses(): void
+    - validateClassCourses(): void
+    - validateStudents(): void
+    - validateScores(): void
   }
 
   class DataInitializer {
@@ -53,9 +66,12 @@ package "persistence" {
 
   class LoadDiagnostics {
     + add(String, int, String, String): void
+    + recordStats(String, int, int): void
+    + updateLoaded(String, int): void
+    + hasIssues(): boolean
+    + issueCount(): int
     + writeTo(Path): void
     + printSummary(PrintStream): void
-    + hasIssues(): boolean
   }
 
   class LoadIssue <<record>> {
@@ -64,6 +80,14 @@ package "persistence" {
     + category: String
     + summary: String
   }
+
+  class DepartmentCsvCodec
+  class EmployeeCsvCodec
+  class CourseCsvCodec
+  class SchoolClassCsvCodec
+  class ClassCourseCsvCodec
+  class StudentCsvCodec
+  class ScoreCsvCodec
 }
 
 package "util" {
@@ -77,45 +101,92 @@ package "util" {
     + hash(String, String): String
     + verify(String, String, String): boolean
   }
+  class Validators {
+    + requireUsername(String): String
+    + requirePassword(String): void
+    + requireName(String): String
+    + optionalDescription(String): String
+    + optionalPhone(String): String
+    + optionalEmail(String): String
+    + requireCode(String, String): String
+    + requireDate(String): LocalDate
+    + requireScore(String): double
+    + requireCapacity(String): int
+    + requireId(String, String): long
+  }
+  class Dates {
+    + parseDate(String): LocalDate
+    + formatDate(LocalDate): String
+    + parseDateTime(String): LocalDateTime
+    + formatDateTime(LocalDateTime): String
+    + now(): LocalDateTime
+  }
+}
+
+package "exception" {
+  class BusinessException {
+    + BusinessException(String)
+  }
+  class DataAccessException {
+    + DataAccessException(String)
+    + DataAccessException(String, Throwable)
+  }
 }
 
 CsvRepository ..|> Repository
 CsvRepository --> CsvCodec
-CsvRepository --> LoadDiagnostics
 CsvRepository --> CsvUtil
+CsvRepository --> LoadDiagnostics
+CsvRepository ..> DataAccessException : 读写失败
 
-DataLoader --> Repository
-DataLoader --> CsvRepository
+DepartmentCsvCodec ..|> CsvCodec
+EmployeeCsvCodec ..|> CsvCodec
+CourseCsvCodec ..|> CsvCodec
+SchoolClassCsvCodec ..|> CsvCodec
+ClassCourseCsvCodec ..|> CsvCodec
+StudentCsvCodec ..|> CsvCodec
+ScoreCsvCodec ..|> CsvCodec
+
+DataLoader --> CsvRepository : 7 个实体仓储 + 诊断
 DataLoader --> LoadDiagnostics
-
-DataInitializer --> Repository
-DataInitializer --> CsvCodec
-DataInitializer --> PasswordHasher
+DataInitializer --> CsvRepository : 建文件 / 写种子
+DataInitializer --> PasswordHasher : 生成演示账号
+DataInitializer --> LoadDiagnostics
 
 LoadDiagnostics --> LoadIssue
+BusinessException --|> RuntimeException
+DataAccessException --|> RuntimeException
 
 note right of CsvCodec
-  7 个实现：
+  7 个实现，每个实体一个 Codec：
   Department / Employee / Course /
   SchoolClass / ClassCourse / Student / Score。
+  相当于每个实体的 Strategy。
 end note
 
 note bottom of DataLoader
   加载顺序：departments → employees → courses
   → classes → class_courses → students → scores。
-  跨文件引用校验；坏行只从内存移除。
-  成绩加载后按 (studentId, courseId) 校验唯一性，
+  引用缺失的实体只从内存移除，不写回文件；
+  成绩按 (studentId, courseId) 校验唯一性，
   重复行保留首条并记入 LoadDiagnostics。
 end note
 
 note bottom of DataInitializer
-  全新初始化才写演示数据；
-  部分初始化只补文件/表头与管理员兜底。
+  仅在全新数据目录时写入演示数据；
+  部分初始化只补文件/表头和管理员兜底账号。
 end note
 
 note bottom of CsvRepository
   每个实体一个 CSV 文件；
-  单文件临时文件 + 原子替换。
+  写入走“临时文件 + 原子替换”，
+  启动/退出各一次全量落盘。
+end note
+
+note right of LoadDiagnostics
+  日志只写时间戳、文件名、行号、
+  错误类别与安全摘要，
+  不写整行内容、密码、哈希或联系方式。
 end note
 
 @enduml
