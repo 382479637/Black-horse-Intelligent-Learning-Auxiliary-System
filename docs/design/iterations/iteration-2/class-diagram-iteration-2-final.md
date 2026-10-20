@@ -469,7 +469,7 @@ MenuFactory 实现 ──> 各模块 UI
 | `ScoreUI` | 成绩交互 | `show()` |
 | `StatisticsUI` | 统计交互 | `show()` |
 | `WarningUI` | 预警交互 | `show()` |
-| `AccountUI` | 修改密码/本人资料 | `show()` |
+| `AccountUI` | 本人资料查看（UC-16，只读）与修改密码 | `show()`, `showProfile()` |
 
 > UI 只调用 service，不导入 `persistence`；所有业务错误由 service 抛 `BusinessException`，UI 捕获并显示消息。
 >

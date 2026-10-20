@@ -154,7 +154,8 @@ public class ApplicationBootstrap {
                 studentService, io, tablePrinter);
         WarningUI warningUI = new WarningUI(warningService, classService,
                 studentService, io, tablePrinter);
-        AccountUI accountUI = new AccountUI(authService, io);
+        AccountUI accountUI = new AccountUI(authService, employeeService,
+                departmentService, io, tablePrinter);
 
         AdminMenuFactory adminMenuFactory = new AdminMenuFactory(departmentUI, employeeUI,
                 courseUI, classUI, teachingUI, studentUI, scoreUI,

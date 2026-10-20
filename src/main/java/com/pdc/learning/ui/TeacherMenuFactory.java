@@ -52,6 +52,7 @@ public class TeacherMenuFactory implements MenuFactory {
         menu.addItem("2", "成绩管理", scoreUI::show);
         menu.addItem("3", "统计与预警", () -> open(statisticsMenu()));
         menu.addItem("4", "修改密码", accountUI::show);
+        menu.addItem("5", "我的资料", accountUI::showProfile);
         return menu;
     }
 
