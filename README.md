@@ -1,1 +1,1 @@
-# Blac-horse-Intelligent-Learning-Auxiliary-System
+# Black-horse-Intelligent-Learning-Auxiliary-System
