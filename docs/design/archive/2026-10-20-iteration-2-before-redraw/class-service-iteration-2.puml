@@ -1,0 +1,211 @@
+@startuml
+title 服务类图 — Iteration 2（最终）
+skinparam classAttributeIconSize 0
+hide empty members
+left to right direction
+
+package "service" {
+  class Session {
+    - currentUser: Employee
+    + login(Employee): void
+    + logout(): void
+    + currentUser(): Optional<Employee>
+    + isAdmin(): boolean
+    + isTeacher(): boolean
+    + requireAdmin(): void
+    + requireTeacher(): void
+    + teacherId(): Long
+    + canAccess(ClassCourse): boolean
+    + filterClassCourses(List<ClassCourse>): List<ClassCourse>
+  }
+
+  class AuthService {
+    + login(String, String): Employee
+    + logout(): void
+    + changePassword(String, String): void
+    + currentUser(): Optional<Employee>
+    + session(): Session
+  }
+
+  class DepartmentService {
+    + list(): List<Department>
+    + search(String): List<Department>
+    + create(String, String): Department
+    + update(long, String, String): void
+    + delete(long): void
+    + employeeCount(long): long
+  }
+
+  class EmployeeService {
+    + search(String, Long, Role, EmployeeStatus): List<Employee>
+    + create(...): Employee
+    + update(long, ...): void
+    + delete(long): void
+    + changeStatus(long, EmployeeStatus): void
+    + changeRole(long, Role): void
+    + resetPassword(long, String): void
+    + findById(long): Employee
+    + listTeachers(): List<Employee>
+  }
+
+  class CourseService {
+    + list(): List<Course>
+    + create(String, String, String): Course
+    + update(long, String, String, String): void
+    + delete(long): void
+  }
+
+  class ClassService {
+    + list(): List<SchoolClass>
+    + filter(String, ClassStatus, Long): List<SchoolClass>
+    + create(...): SchoolClass
+    + update(long, ...): void
+    + delete(long): void
+    + changeStatus(long, ClassStatus): void
+    + assignHeadTeacher(long, Long): void
+  }
+
+  class TeachingService {
+    + listByClass(long): List<ClassCourse>
+    + addCourse(long, long): ClassCourse
+    + assignTeacher(long, Long): void
+    + removeCourse(long): void
+    + listByTeacher(long): List<ClassCourse>
+  }
+
+  class StudentService {
+    + list(): List<Student>
+    + search(String, Long, StudentStatus): List<Student>
+    + listByClass(long): List<Student>
+    + create(...): Student
+    + update(long, ...): void
+    + delete(long): void
+    + transfer(long, long): void
+    + changeStatus(long, StudentStatus): void
+  }
+
+  class ScoreService {
+    + listByClassCourse(long): List<Score>
+    + findByStudentAndCourse(long, long): Optional<Score>
+    + record(long, long, double): Score
+    + update(long, double): void
+    + delete(long): void
+    + batchRecord(long, Map<String,Double>): List<String>
+  }
+
+  class StatisticsService {
+    + classStatistics(long): ClassStatistics
+    + courseStatistics(long): CourseStatistics
+    + studentStatistics(long): StudentStatistics
+    + classRanking(long): List<RankEntry>
+    + studentMetrics(long): StudentMetrics
+  }
+
+  class WarningService {
+    + studentWarnings(long): List<WarningResult>
+    + classWarning(long): ClassWarning
+    + evaluateStudent(long): WarningResult
+  }
+}
+
+package "dto（详见 DTO 类图）" {
+  class ClassStatistics
+  class CourseStatistics
+  class StudentStatistics
+  class ScoreDetail
+  class RankEntry
+  class StudentMetrics
+  class WarningResult
+  class ClassWarning
+  enum WarningLevel
+  enum ClassWarningLevel
+  enum DataStatus
+}
+
+package "model（详见领域类图）" {
+  class Employee
+  class Student
+  class Department
+  class Course
+  class SchoolClass
+  class ClassCourse
+  class Score
+}
+
+package "persistence（接口）" {
+  interface "Repository<T extends Identifiable>" as Repository {
+    + findAll(): List<T>
+    + findById(long): Optional<T>
+    + save(T): T
+    + delete(long): void
+    + saveAll(): void
+  }
+}
+
+class PasswordHasher
+
+' 会话与权限
+AuthService --> Session
+AuthService --> PasswordHasher
+Session --> ClassCourse : canAccess / filter
+
+' 每个 service 通过构造器接收所需的 Repository<T>；这里用一条依赖表示，
+' 具体仓储组合见 architecture-design.md 第 4.2 节。
+AuthService --> Repository : Employee
+DepartmentService --> Repository : Department / Employee
+EmployeeService --> Repository : Employee / Department / SchoolClass / ClassCourse
+EmployeeService --> PasswordHasher
+EmployeeService --> Session
+CourseService --> Repository : Course / ClassCourse / Score
+CourseService --> Session : 写操作 requireAdmin
+ClassService --> Repository : SchoolClass / Employee / Student / ClassCourse / Score
+TeachingService --> Repository : ClassCourse / SchoolClass / Course / Employee / Score
+StudentService --> Repository : Student / SchoolClass / ClassCourse / Score
+StudentService --> Session
+ScoreService --> Repository : Score / Student / ClassCourse / SchoolClass
+ScoreService --> Session
+StatisticsService --> Repository : Student / SchoolClass / ClassCourse / Score / Course / Employee
+StatisticsService --> Session
+WarningService --> StatisticsService
+WarningService --> Session
+
+StatisticsService ..> ClassStatistics
+StatisticsService ..> CourseStatistics
+StatisticsService ..> StudentStatistics
+StatisticsService ..> RankEntry
+StatisticsService ..> StudentMetrics
+WarningService ..> WarningResult
+WarningService ..> ClassWarning
+WarningService ..> WarningLevel
+WarningService ..> ClassWarningLevel
+
+note right of Repository
+  service 只依赖 Repository<T> 接口；
+  具体 CsvRepository<T> 由
+  ApplicationBootstrap 注入。
+end note
+
+note bottom of StatisticsService
+  按 Session 的可见范围聚合成绩；
+  转班学生旧成绩留在原 ClassCourse。
+end note
+
+note bottom of WarningService
+  评估 R1–R6，收集全部命中，
+  取最高等级；无成绩为“数据不足”。
+end note
+
+note right of ScoreService
+  唯一键 (studentId, courseId)：
+  由 classCourseId 解析 courseId；
+  已有成绩则更新原记录，
+  不因转班新建重复成绩。
+end note
+
+note bottom of CourseService
+  list() 供 UC-06a 使用；
+  教师只读，增删改仍由
+  service 校验管理员权限。
+end note
+
+@enduml

@@ -1,0 +1,96 @@
+@startuml
+title 黑马智能学习辅助系统 — 用例图（v0.2）
+left to right direction
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #F8F8F8
+  BorderColor #333333
+}
+
+actor "管理员\nAdministrator" as Admin
+actor "教师\nTeacher" as Teacher
+
+rectangle "黑马智能学习辅助系统" {
+  usecase "UC-01 登录\nLogin" as UC01
+  usecase "UC-02 登出\nLogout" as UC02
+  usecase "UC-03 修改密码\nChange Password" as UC03
+
+  usecase "UC-04 管理部门\nManage Departments" as UC04
+  usecase "UC-04a 搜索部门\nSearch Departments\n(Should)" as UC04a
+  usecase "UC-05 管理员工\nManage Employees" as UC05
+  usecase "UC-05a 重置员工密码\nReset Employee Password\n(Should)" as UC05a
+  usecase "UC-06 管理课程\nManage Courses" as UC06
+  usecase "UC-06a 查看课程目录\nView Course Catalog" as UC06a
+
+  usecase "UC-07 管理班级\nManage Classes" as UC07
+  usecase "UC-07a 筛选班级\nFilter Classes\n(Should)" as UC07a
+  usecase "UC-08 管理教学任务\nManage Teaching Assignments" as UC08
+  usecase "UC-09 管理学生\nManage Students" as UC09
+  usecase "UC-09a 学生转班\nTransfer Student" as UC09a
+
+  usecase "UC-10 管理成绩\nManage Scores" as UC10
+  usecase "UC-10a 批量录入成绩\nBatch Enter Scores\n(Should)" as UC10a
+
+  usecase "UC-11 查看班级统计\nView Class Statistics" as UC11
+  usecase "UC-12 查看学生统计\nView Student Statistics" as UC12
+  usecase "UC-13 查看学习预警\nView Learning Warnings" as UC13
+
+  usecase "UC-14 查看我的教学\nView My Teaching" as UC14
+  usecase "UC-15 查看我的学生\nView My Students" as UC15
+  usecase "UC-16 查看本人资料\nView My Profile" as UC16
+}
+
+' 管理员
+Admin --> UC01
+Admin --> UC02
+Admin --> UC03
+Admin --> UC04
+Admin --> UC05
+Admin --> UC06
+Admin --> UC06a
+Admin --> UC07
+Admin --> UC08
+Admin --> UC09
+Admin --> UC10
+Admin --> UC11
+Admin --> UC12
+Admin --> UC13
+
+' 教师
+Teacher --> UC01
+Teacher --> UC02
+Teacher --> UC03
+Teacher --> UC06a
+Teacher --> UC10
+Teacher --> UC11
+Teacher --> UC12
+Teacher --> UC13
+Teacher --> UC14
+Teacher --> UC15
+Teacher --> UC16
+
+' 可选扩展：扩展用例 --> 基础用例
+UC04a .> UC04 : <<extend>>
+UC05a .> UC05 : <<extend>>
+UC07a .> UC07 : <<extend>>
+UC09a .> UC09 : <<extend>>
+UC10a .> UC10 : <<extend>>
+
+note right of UC10
+  教师只能操作本人任课
+  ClassCourse 的成绩；
+  待分配任务仅管理员可处理。
+end note
+
+note right of UC13
+  “数据不足”按请求者
+  可见范围判断；教师只
+  统计本人任课 ClassCourse。
+end note
+
+note bottom of UC09
+  转班保留原班历史成绩；
+  Score 绑定不可变 classCourseId。
+end note
+
+@enduml

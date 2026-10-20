@@ -1,0 +1,179 @@
+@startuml
+title 领域模型类图 — Iteration 2（最终）
+skinparam classAttributeIconSize 0
+hide empty members
+
+interface Identifiable {
+  + getId(): long
+}
+
+abstract class AbstractEntity implements Identifiable {
+  - id: long
+  + getId(): long
+  # setId(long): void
+  + isNew(): boolean
+  + equals(Object): boolean
+  + hashCode(): int
+}
+
+abstract class Person extends AbstractEntity {
+  - name: String
+  - gender: Gender
+  - phone: String
+  + getName(): String
+  + getGender(): Gender
+  + getPhone(): String
+  + updateProfile(String, Gender, String): void
+}
+
+class Employee extends Person {
+  - username: String
+  - email: String
+  - passwordHash: String
+  - passwordSalt: String
+  - departmentId: long
+  - role: Role
+  - status: EmployeeStatus
+  - hireDate: LocalDate
+  + isAdmin(): boolean
+  + isActive(): boolean
+  + canTeach(): boolean
+  + getEmail(): String
+  + updateEmail(String): void
+  + updatePassword(String, String): void
+  + changeStatus(EmployeeStatus): void
+  + changeRole(Role): void
+  + getPasswordSalt(): String
+  + getPasswordHash(): String
+}
+
+class Student extends Person {
+  - studentNo: String
+  - classId: long
+  - enrollmentDate: LocalDate
+  - status: StudentStatus
+  + isActive(): boolean
+  + transferTo(long): void
+  + changeStatus(StudentStatus): void
+}
+
+class Department extends AbstractEntity {
+  - name: String
+  - description: String
+  + rename(String): void
+  + updateDescription(String): void
+}
+
+class Course extends AbstractEntity {
+  - code: String
+  - name: String
+  - description: String
+  + update(String, String, String): void
+}
+
+class SchoolClass extends AbstractEntity {
+  - code: String
+  - name: String
+  - headTeacherId: Long
+  - startDate: LocalDate
+  - endDate: LocalDate
+  - capacity: int
+  - status: ClassStatus
+  + isFull(int): boolean
+  + canAcceptStudent(): boolean
+  + isFinished(): boolean
+  + changeStatus(ClassStatus): void
+  + assignHeadTeacher(Long): void
+  + updateDetails(String, String, LocalDate, LocalDate, int): void
+}
+
+class ClassCourse extends AbstractEntity {
+  - classId: long
+  - courseId: long
+  - teacherId: Long
+  - createdAt: LocalDateTime
+  + isAssigned(): boolean
+  + assignTeacher(Long): void
+  + unassignTeacher(): void
+}
+
+class Score extends AbstractEntity {
+  - studentId: long
+  - classCourseId: long
+  - score: double
+  - updatedAt: LocalDateTime
+  + isPassed(): boolean
+  + updateScore(double, LocalDateTime): void
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  UNKNOWN
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum ClassStatus {
+  PLANNED
+  ACTIVE
+  FINISHED
+}
+
+enum StudentStatus {
+  ACTIVE
+  SUSPENDED
+  GRADUATED
+}
+
+' 多重性读法：左端描述右侧实例可关联的左侧实例数；
+' 右端描述左侧实例可关联的右侧实例数。
+Department "1" -- "0..*" Employee : employs >
+SchoolClass "0..*" -- "0..1" Employee : headTeacher >
+ClassCourse "0..*" -- "0..1" Employee : teacher >
+
+SchoolClass "1" *-- "0..*" ClassCourse : offers >
+Course "1" -- "0..*" ClassCourse : referenced by >
+SchoolClass "1" -- "0..*" Student : current class >
+Student "1" *-- "0..*" Score : owns >
+ClassCourse "1" -- "0..*" Score : assessed by >
+
+note right of ClassCourse
+  teacherId 可空；为空表示“待分配”。
+  classId/courseId 创建后不可变。
+end note
+
+note right of Score
+  classCourseId 创建后不可变；
+  学生转班不迁移历史成绩。
+  唯一键为 (studentId, courseId)，
+  courseId 经 ClassCourse 解析。
+end note
+
+note bottom of Student
+  Score 的唯一组合拥有者是 Student：
+  删除普通学生时级联删除成绩；
+  归档保护状态下禁止删除学生。
+end note
+
+note bottom of ClassCourse
+  ClassCourse 不是 Score 的组合拥有者：
+  有成绩时不得移除教学任务；
+  成绩只通过 classCourseId 引用它。
+end note
+
+note right of SchoolClass
+  status: PLANNED / ACTIVE / FINISHED。
+  FINISHED 为结业归档终态。
+end note
+
+@enduml

@@ -1,0 +1,121 @@
+@startuml
+title 持久化类图 — Iteration 2（最终）
+skinparam classAttributeIconSize 0
+hide empty members
+left to right direction
+
+package "persistence" {
+  interface "Repository<T extends Identifiable>" as Repository {
+    + findAll(): List<T>
+    + findById(long): Optional<T>
+    + save(T): T
+    + delete(long): void
+    + saveAll(): void
+    + findAll(Predicate<T>): List<T>
+    + findFirst(Predicate<T>): Optional<T>
+  }
+
+  interface "CsvCodec<T extends Identifiable>" as CsvCodec {
+    + header(): String[]
+    + parse(String[]): T
+    + format(T): String[]
+    + idOf(T): long
+    + withId(T, long): T
+  }
+
+  class "CsvRepository<T extends Identifiable>" as CsvRepository {
+    - file: Path
+    - codec: CsvCodec<T>
+    - store: Map<Long,T>
+    - nextId: long
+    + load(LoadDiagnostics): void
+    + findAll(): List<T>
+    + findById(long): Optional<T>
+    + save(T): T
+    + delete(long): void
+    + saveAll(): void
+    + removeInMemory(long): void
+    - writeAtomically(): void
+  }
+
+  class DataLoader {
+    + loadAll(): void
+    - validateReferences(): void
+    - removeInvalid(...): void
+  }
+
+  class DataInitializer {
+    + ensureLayout(Path): void
+    + isFresh(): boolean
+    + seedDemoData(): void
+    + ensureAdmin(): void
+  }
+
+  class LoadDiagnostics {
+    + add(String, int, String, String): void
+    + writeTo(Path): void
+    + printSummary(PrintStream): void
+    + hasIssues(): boolean
+  }
+
+  class LoadIssue <<record>> {
+    + file: String
+    + line: int
+    + category: String
+    + summary: String
+  }
+}
+
+package "util" {
+  class CsvUtil {
+    + escape(String): String
+    + split(String): String[]
+    + join(String[]): String
+  }
+  class PasswordHasher {
+    + generateSalt(): String
+    + hash(String, String): String
+    + verify(String, String, String): boolean
+  }
+}
+
+CsvRepository ..|> Repository
+CsvRepository --> CsvCodec
+CsvRepository --> LoadDiagnostics
+CsvRepository --> CsvUtil
+
+DataLoader --> Repository
+DataLoader --> CsvRepository
+DataLoader --> LoadDiagnostics
+
+DataInitializer --> Repository
+DataInitializer --> CsvCodec
+DataInitializer --> PasswordHasher
+
+LoadDiagnostics --> LoadIssue
+
+note right of CsvCodec
+  7 个实现：
+  Department / Employee / Course /
+  SchoolClass / ClassCourse / Student / Score。
+end note
+
+note bottom of DataLoader
+  加载顺序：departments → employees → courses
+  → classes → class_courses → students → scores。
+  跨文件引用校验；坏行只从内存移除。
+  成绩加载后按 (studentId, courseId) 校验唯一性，
+  重复行保留首条并记入 LoadDiagnostics。
+end note
+
+note bottom of DataInitializer
+  全新初始化才写演示数据；
+  部分初始化只补文件/表头与管理员兜底。
+end note
+
+note bottom of CsvRepository
+  每个实体一个 CSV 文件；
+  单文件临时文件 + 原子替换。
+end note
+
+@enduml
