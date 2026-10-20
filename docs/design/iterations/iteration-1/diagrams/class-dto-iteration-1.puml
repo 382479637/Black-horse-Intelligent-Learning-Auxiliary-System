@@ -1,0 +1,114 @@
+@startuml
+title 统计与预警 DTO — Iteration 1（正式）
+skinparam classAttributeIconSize 0
+hide empty members
+left to right direction
+
+package "dto" {
+  class ClassStatistics <<record>> {
+    + classId: long
+    + className: String
+    + studentCount: int
+    + scoreCount: int
+    + average: double
+    + passRate: double
+    + highest: double
+    + lowest: double
+    + courses: List<CourseStatistics>
+  }
+  class CourseStatistics <<record>> {
+    + classCourseId: long
+    + courseCode: String
+    + courseName: String
+    + teacherName: String
+    + scoreCount: int
+    + average: double
+    + passRate: double
+    + highest: double
+    + lowest: double
+  }
+  class StudentStatistics <<record>> {
+    + studentId: long
+    + studentNo: String
+    + name: String
+    + average: double
+    + failedCount: int
+    + rank: Integer
+    + rankNote: String
+    + details: List<ScoreDetail>
+  }
+  class ScoreDetail <<record>> {
+    + classId: long
+    + className: String
+    + courseId: long
+    + courseCode: String
+    + courseName: String
+    + score: double
+  }
+  class RankEntry <<record>> {
+    + rank: int
+    + studentId: long
+    + studentNo: String
+    + name: String
+    + average: double
+    + failedCount: int
+  }
+  class StudentMetrics <<record>> {
+    + studentId: long
+    + scoreCount: int
+    + average: double
+    + failedCount: int
+  }
+  class WarningResult <<record>> {
+    + studentId: long
+    + studentNo: String
+    + name: String
+    + level: WarningLevel
+    + average: double
+    + failedCount: int
+    + hitRules: List<String>
+  }
+  class ClassWarning <<record>> {
+    + classId: long
+    + className: String
+    + level: ClassWarningLevel
+    + passRate: double
+    + average: double
+    + scoreCount: int
+  }
+  enum WarningLevel {
+    SEVERE
+    MODERATE
+    MILD
+    NORMAL
+    INSUFFICIENT_DATA
+  }
+  enum ClassWarningLevel {
+    NEEDS_ATTENTION
+    NORMAL
+    INSUFFICIENT_DATA
+  }
+}
+
+ClassStatistics *-- "*" CourseStatistics : courses
+StudentStatistics *-- "*" ScoreDetail : details
+WarningResult --> WarningLevel
+ClassWarning --> ClassWarningLevel
+
+note bottom of ClassStatistics
+  班级统计聚合各门课程统计。
+  studentCount 为全班学生数，
+  不受教师可见课程范围影响。
+end note
+
+note bottom of StudentStatistics
+  rank 为空表示无排名；
+  rankNote 给出“无排名（本班暂无成绩）”等原因。
+end note
+
+note bottom of WarningResult
+  评估 R1–R6，收集全部命中，
+  取最高等级；无成绩为“数据不足”。
+end note
+
+@enduml

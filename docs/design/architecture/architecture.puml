@@ -1,0 +1,93 @@
+@startuml
+title 黑马智能学习辅助系统 — 分层架构（v0.5，组件视图）
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+left to right direction
+
+package "app（组合根）" as app {
+  [Main]
+  [ApplicationBootstrap]
+}
+
+package "ui（表现层）" as ui {
+  [ConsoleIO / TablePrinter]
+  [Menu / MenuItem / MenuAction]
+  [MenuFactory（接口）]
+  [AdminMenuFactory / TeacherMenuFactory]
+  [LoginUI]
+  [DepartmentUI ... WarningUI]
+}
+
+package "service（应用层）" as service {
+  [AuthService ... WarningService]
+  [Session（含可见范围）]
+}
+
+package "dto（结果对象）" as dto {
+  [ClassStatistics / CourseStatistics]
+  [StudentStatistics / ScoreDetail]
+  [RankEntry / StudentMetrics]
+  [WarningResult / ClassWarning]
+  [WarningLevel / ClassWarningLevel]
+  [DataStatus]
+}
+
+package "model（领域层）" as model {
+  [Identifiable / AbstractEntity]
+  [Person / Employee / Student]
+  [Department / Course]
+  [SchoolClass / ClassCourse / Score]
+  [Gender / Role / 状态枚举]
+}
+
+package "persistence（持久化）" as persistence {
+  [Repository<T>]
+  [CsvCodec<T> / CsvRepository<T>]
+  [DataLoader / DataInitializer / LoadDiagnostics]
+}
+
+package "util（工具）" as util {
+  [PasswordHasher]
+  [CsvUtil / Validators / Dates]
+}
+
+' 依赖方向：上层指向下层；service 只依赖 Repository<T> 接口。
+app --> ui
+app --> service
+app --> persistence
+app --> util
+
+ui --> service
+ui --> dto
+
+service --> model
+service --> dto
+service --> persistence : 仅 Repository<T>
+service --> util
+
+persistence --> model
+persistence --> util
+
+note right of service
+  业务规则集中在 service；
+  UI 只做输入解析与结果打印。
+end note
+
+note right of persistence
+  service 只依赖 Repository<T> 接口，
+  由 ApplicationBootstrap 注入
+  CsvRepository<T> 实现。
+end note
+
+note bottom of persistence
+  加载顺序：departments → employees → courses
+  → classes → class_courses → students → scores。
+  单文件临时文件 + 原子替换；无跨文件事务。
+end note
+
+note bottom of app
+  ApplicationBootstrap 是唯一组合根：
+  创建仓储、编解码器、服务与 UI，并完成构造器注入。
+end note
+
+@enduml

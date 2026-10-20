@@ -1,0 +1,137 @@
+@startuml
+title 统计与预警 DTO — Iteration 2（最终）
+skinparam classAttributeIconSize 0
+hide empty members
+left to right direction
+
+package "dto" {
+  class ClassStatistics <<record>> {
+    + classId: long
+    + className: String
+    + studentCount: int
+    + scoreCount: int
+    + dataStatus: DataStatus
+    + average: Double
+    + passRate: Double
+    + highest: Double
+    + lowest: Double
+    + courses: List<CourseStatistics>
+  }
+  class CourseStatistics <<record>> {
+    + classCourseId: long
+    + courseCode: String
+    + courseName: String
+    + teacherName: String
+    + scoreCount: int
+    + dataStatus: DataStatus
+    + average: Double
+    + passRate: Double
+    + highest: Double
+    + lowest: Double
+  }
+  class StudentStatistics <<record>> {
+    + studentId: long
+    + studentNo: String
+    + name: String
+    + scoreCount: int
+    + dataStatus: DataStatus
+    + average: Double
+    + failedCount: Integer
+    + rank: Integer
+    + rankNote: String
+    + details: List<ScoreDetail>
+  }
+  class ScoreDetail <<record>> {
+    + classId: long
+    + className: String
+    + courseId: long
+    + courseCode: String
+    + courseName: String
+    + score: double
+    + updatedAt: LocalDateTime
+  }
+  class RankEntry <<record>> {
+    + rank: int
+    + studentId: long
+    + studentNo: String
+    + name: String
+    + average: double
+    + failedCount: int
+  }
+  class StudentMetrics <<record>> {
+    + studentId: long
+    + scoreCount: int
+    + average: Double
+    + failedCount: Integer
+  }
+  class WarningResult <<record>> {
+    + studentId: long
+    + studentNo: String
+    + name: String
+    + level: WarningLevel
+    + average: Double
+    + failedCount: Integer
+    + hitRules: List<String>
+  }
+  class ClassWarning <<record>> {
+    + classId: long
+    + className: String
+    + level: ClassWarningLevel
+    + passRate: Double
+    + average: Double
+    + scoreCount: int
+  }
+  enum WarningLevel {
+    SEVERE
+    MODERATE
+    MILD
+    NORMAL
+    INSUFFICIENT_DATA
+  }
+  enum ClassWarningLevel {
+    NEEDS_ATTENTION
+    NORMAL
+    INSUFFICIENT_DATA
+  }
+  enum DataStatus {
+    AVAILABLE
+    INSUFFICIENT
+  }
+}
+
+ClassStatistics *-- "0..*" CourseStatistics : courses
+StudentStatistics *-- "0..*" ScoreDetail : details
+ClassStatistics --> DataStatus
+CourseStatistics --> DataStatus
+StudentStatistics --> DataStatus
+WarningResult --> WarningLevel
+ClassWarning --> ClassWarningLevel
+
+note bottom of ClassStatistics
+  班级统计聚合各门课程统计。
+  studentCount 为全班学生数，
+  不受教师可见课程范围影响。
+  dataStatus=INSUFFICIENT 时，
+  四个指标为 null，UI 显示“数据不足”。
+end note
+
+note bottom of StudentStatistics
+  scoreCount 为可见范围内成绩数；
+  rank 为空表示无排名；
+  rankNote 给出“无排名（本班暂无成绩）”等原因。
+end note
+
+note bottom of WarningResult
+  评估 R1–R6，收集全部命中，
+  取最高等级；无成绩为“数据不足”。
+  INSUFFICIENT_DATA 时 average/failedCount 为 null。
+end note
+
+note bottom of DataStatus
+  AVAILABLE：有可见成绩，指标可读；
+  INSUFFICIENT：无可见成绩，指标不适用。
+  所有 List 字段在 record 构造器中 List.copyOf，
+  空列表表示“没有明细”，不是“数据不足”。
+end note
+
+@enduml

@@ -1,0 +1,380 @@
+@startuml
+title 服务与持久化类图 — Iteration 1 讨论稿（非正式）
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "service" {
+  class Session {
+    - currentUser: Employee
+    + login(Employee): void
+    + logout(): void
+    + currentUser(): Optional<Employee>
+    + isAdmin(): boolean
+    + isTeacher(): boolean
+    + requireAdmin(): void
+    + requireTeacher(): void
+    + scope(): AccessScope
+  }
+
+  class AccessScope {
+    - user: Employee
+    + isAdmin(): boolean
+    + teacherId(): Long
+    + canAccess(ClassCourse): boolean
+    + filterClassCourses(List<ClassCourse>): List<ClassCourse>
+  }
+
+  class AuthService {
+    + login(String, String): Employee
+    + logout(): void
+    + changePassword(String, String): void
+    + currentUser(): Optional<Employee>
+    + session(): Session
+  }
+
+  class DepartmentService {
+    + list(): List<Department>
+    + search(String): List<Department>
+    + create(String, String): Department
+    + update(long, String, String): void
+    + delete(long): void
+    + employeeCount(long): long
+  }
+
+  class EmployeeService {
+    + search(String, Long, Role, EmployeeStatus): List<Employee>
+    + create(...): Employee
+    + update(long, ...): void
+    + delete(long): void
+    + changeStatus(long, EmployeeStatus): void
+    + changeRole(long, Role): void
+    + resetPassword(long, String): void
+    + findById(long): Employee
+    + listTeachers(): List<Employee>
+  }
+
+  class CourseService {
+    + list(): List<Course>
+    + create(String, String, String): Course
+    + update(long, String, String, String): void
+    + delete(long): void
+  }
+
+  class ClassService {
+    + list(): List<SchoolClass>
+    + filter(String, ClassStatus, Long): List<SchoolClass>
+    + create(...): SchoolClass
+    + update(long, ...): void
+    + delete(long): void
+    + changeStatus(long, ClassStatus): void
+    + assignHeadTeacher(long, Long): void
+  }
+
+  class TeachingService {
+    + listByClass(long): List<ClassCourse>
+    + addCourse(long, long): ClassCourse
+    + assignTeacher(long, Long): void
+    + removeCourse(long): void
+    + listByTeacher(long): List<ClassCourse>
+  }
+
+  class StudentService {
+    + list(): List<Student>
+    + search(String, Long, StudentStatus): List<Student>
+    + listByClass(long): List<Student>
+    + create(...): Student
+    + update(long, ...): void
+    + delete(long): void
+    + transfer(long, long): void
+    + changeStatus(long, StudentStatus): void
+  }
+
+  class ScoreService {
+    + listByClassCourse(long): List<Score>
+    + record(long, long, double): Score
+    + update(long, double): void
+    + delete(long): void
+    + batchRecord(long, Map<String,Double>): List<String>
+  }
+
+  class StatisticsService {
+    + classStatistics(long): ClassStatistics
+    + courseStatistics(long): CourseStatistics
+    + studentStatistics(long): StudentStatistics
+    + classRanking(long): List<RankEntry>
+    + studentMetrics(long): StudentMetrics
+  }
+
+  class WarningService {
+    + studentWarnings(long): List<WarningResult>
+    + classWarning(long): ClassWarning
+    + evaluateStudent(long): WarningResult
+  }
+}
+
+package "dto" {
+  class ClassStatistics <<record>> {
+    + classId: long
+    + className: String
+    + studentCount: int
+    + scoreCount: int
+    + average: double
+    + passRate: double
+    + highest: double
+    + lowest: double
+    + courses: List<CourseStatistics>
+  }
+
+  class CourseStatistics <<record>> {
+    + classCourseId: long
+    + courseCode: String
+    + courseName: String
+    + teacherName: String
+    + scoreCount: int
+    + average: double
+    + passRate: double
+    + highest: double
+    + lowest: double
+  }
+
+  class StudentStatistics <<record>> {
+    + studentId: long
+    + studentNo: String
+    + name: String
+    + average: double
+    + failedCount: int
+    + rank: Integer
+    + rankNote: String
+    + details: List<ScoreDetail>
+  }
+
+  class ScoreDetail <<record>> {
+    + classId: long
+    + className: String
+    + courseId: long
+    + courseCode: String
+    + courseName: String
+    + score: double
+  }
+
+  class RankEntry <<record>> {
+    + rank: int
+    + studentId: long
+    + studentNo: String
+    + name: String
+    + average: double
+    + failedCount: int
+  }
+
+  class StudentMetrics <<record>> {
+    + studentId: long
+    + scoreCount: int
+    + average: double
+    + failedCount: int
+  }
+
+  class WarningResult <<record>> {
+    + studentId: long
+    + studentNo: String
+    + name: String
+    + level: WarningLevel
+    + average: double
+    + failedCount: int
+    + hitRules: List<String>
+  }
+
+  class ClassWarning <<record>> {
+    + classId: long
+    + className: String
+    + level: ClassWarningLevel
+    + passRate: double
+    + average: double
+    + scoreCount: int
+  }
+
+  enum WarningLevel {
+    SEVERE
+    MODERATE
+    MILD
+    NORMAL
+    INSUFFICIENT_DATA
+  }
+
+  enum ClassWarningLevel {
+    NEEDS_ATTENTION
+    NORMAL
+    INSUFFICIENT_DATA
+  }
+}
+
+package "model（详见领域类图）" {
+  class Employee
+  class Student
+  class Department
+  class Course
+  class SchoolClass
+  class ClassCourse
+  class Score
+}
+
+package "persistence" {
+  interface "Repository<T>" as Repository {
+    + findAll(): List<T>
+    + findById(long): Optional<T>
+    + save(T): T
+    + delete(long): void
+    + saveAll(): void
+    + findAll(Predicate<T>): List<T>
+    + findFirst(Predicate<T>): Optional<T>
+  }
+
+  interface "CsvCodec<T>" as CsvCodec {
+    + header(): String[]
+    + parse(String[]): T
+    + format(T): String[]
+    + idOf(T): long
+    + withId(T, long): T
+  }
+
+  class "CsvRepository<T>" as CsvRepository {
+    - file: Path
+    - codec: CsvCodec<T>
+    - store: Map<Long,T>
+    - nextId: long
+    + load(LoadDiagnostics): void
+    + findAll(): List<T>
+    + findById(long): Optional<T>
+    + save(T): T
+    + delete(long): void
+    + saveAll(): void
+    + removeInMemory(long): void
+    - writeAtomically(): void
+  }
+
+  class DataLoader {
+    + loadAll(): void
+    - validateReferences(): void
+    - removeInvalid(...): void
+  }
+
+  class DataInitializer {
+    + ensureLayout(Path): void
+    + isFresh(): boolean
+    + seedDemoData(): void
+    + ensureAdmin(): void
+  }
+
+  class LoadDiagnostics {
+    + add(String, int, String, String): void
+    + writeTo(Path): void
+    + printSummary(PrintStream): void
+    + hasIssues(): boolean
+  }
+
+  class LoadIssue <<record>> {
+    + file: String
+    + line: int
+    + category: String
+    + summary: String
+  }
+}
+
+package "util" {
+  class PasswordHasher {
+    + generateSalt(): String
+    + hash(String, String): String
+    + verify(String, String, String): boolean
+  }
+  class CsvUtil
+  class Validators
+  class Dates
+}
+
+' ---- service -> repository / model ----
+AuthService --> Repository : Employee
+AuthService --> PasswordHasher
+AuthService --> Session
+
+DepartmentService --> Repository : Department / Employee
+DepartmentService --> Department
+DepartmentService --> Employee
+
+EmployeeService --> Repository : Employee / Department / SchoolClass / ClassCourse
+EmployeeService --> PasswordHasher
+EmployeeService --> Session
+EmployeeService --> Employee
+
+CourseService --> Repository : Course / ClassCourse / Score
+CourseService --> Course
+
+ClassService --> Repository : SchoolClass / Employee / Student / ClassCourse / Score
+ClassService --> SchoolClass
+ClassService --> Employee
+
+TeachingService --> Repository : ClassCourse / SchoolClass / Course / Employee / Score
+TeachingService --> ClassCourse
+
+StudentService --> Repository : Student / SchoolClass / ClassCourse / Score
+StudentService --> Student
+StudentService --> Session
+
+ScoreService --> Repository : Score / Student / ClassCourse / SchoolClass
+ScoreService --> Score
+ScoreService --> Session
+
+StatisticsService --> Repository : Student / SchoolClass / ClassCourse / Score / Course / Employee
+StatisticsService --> Session
+StatisticsService ..> ClassStatistics
+StatisticsService ..> CourseStatistics
+StatisticsService ..> StudentStatistics
+StatisticsService ..> RankEntry
+StatisticsService ..> StudentMetrics
+
+WarningService --> StatisticsService
+WarningService --> Session
+WarningService ..> WarningResult
+WarningService ..> ClassWarning
+WarningService ..> WarningLevel
+WarningService ..> ClassWarningLevel
+
+Session --> AccessScope
+AccessScope --> ClassCourse
+
+' ---- persistence ----
+CsvRepository ..|> Repository
+CsvRepository --> CsvCodec
+CsvRepository --> LoadDiagnostics
+CsvRepository --> CsvUtil
+
+DataLoader --> Repository
+DataLoader --> LoadDiagnostics
+DataLoader --> CsvRepository
+
+DataInitializer --> Repository
+DataInitializer --> CsvCodec
+DataInitializer --> PasswordHasher
+
+LoadDiagnostics --> LoadIssue
+
+note right of Repository
+  service 只依赖 Repository<T> 接口，
+  不直接 new CsvRepository<T>。
+end note
+
+note bottom of CsvCodec
+  7 个实现：Department / Employee / Course /
+  SchoolClass / ClassCourse / Student / Score。
+end note
+
+note bottom of DataLoader
+  加载顺序：departments → employees → courses
+  → classes → class_courses → students → scores。
+  负责跨文件引用校验；坏行只从内存移除。
+end note
+
+note bottom of DataInitializer
+  全新初始化才写演示数据；
+  部分初始化只补文件/表头与管理员兜底。
+end note
+
+@enduml

@@ -1,0 +1,153 @@
+@startuml
+title CUI 类图 — Iteration 1（正式）
+skinparam classAttributeIconSize 0
+hide empty members
+
+interface MenuAction {
+  + execute(): void
+}
+
+class MenuItem {
+  - key: String
+  - label: String
+  - action: MenuAction
+  + matches(String): boolean
+  + execute(): void
+  + getKey(): String
+  + getLabel(): String
+}
+
+class Menu {
+  - title: String
+  - items: List<MenuItem>
+  + addItem(String, String, MenuAction): void
+  + run(ConsoleIO): void
+  - display(): void
+}
+
+class ConsoleIO {
+  + readLine(String): String
+  + readPassword(String): String
+  + readInt(String, int, int): int
+  + readDouble(String, double, double): double
+  + confirm(String): boolean
+  + print(String): void
+  + println(String): void
+}
+
+class TablePrinter {
+  + printTable(List<String[]>, String[]): void
+  + page(List<T>, int, int): List<T>
+  + pageCount(int, int): int
+}
+
+class LoginUI {
+  + run(): void
+}
+
+class MenuFactory {
+  + createMenu(Session): Menu
+}
+
+class DepartmentUI {
+  + show(): void
+}
+class EmployeeUI {
+  + show(): void
+}
+class CourseUI {
+  + show(): void
+}
+class ClassUI {
+  + show(): void
+}
+class TeachingUI {
+  + show(): void
+}
+class StudentUI {
+  + show(): void
+}
+class ScoreUI {
+  + show(): void
+}
+class StatisticsUI {
+  + show(): void
+}
+class WarningUI {
+  + show(): void
+}
+class AccountUI {
+  + show(): void
+}
+
+package "service（详见服务类图）" {
+  class AuthService
+  class DepartmentService
+  class EmployeeService
+  class CourseService
+  class ClassService
+  class TeachingService
+  class StudentService
+  class ScoreService
+  class StatisticsService
+  class WarningService
+  class Session
+}
+
+Menu "1" *-- "*" MenuItem
+MenuItem --> MenuAction
+Menu --> ConsoleIO
+LoginUI --> AuthService
+LoginUI --> MenuFactory
+LoginUI --> ConsoleIO
+MenuFactory --> Session
+MenuFactory --> DepartmentUI
+MenuFactory --> EmployeeUI
+MenuFactory --> CourseUI
+MenuFactory --> ClassUI
+MenuFactory --> TeachingUI
+MenuFactory --> StudentUI
+MenuFactory --> ScoreUI
+MenuFactory --> StatisticsUI
+MenuFactory --> WarningUI
+MenuFactory --> AccountUI
+
+DepartmentUI --> DepartmentService
+DepartmentUI --> ConsoleIO
+EmployeeUI --> EmployeeService
+EmployeeUI --> ConsoleIO
+CourseUI --> CourseService
+CourseUI --> ConsoleIO
+ClassUI --> ClassService
+ClassUI --> ConsoleIO
+TeachingUI --> TeachingService
+TeachingUI --> ConsoleIO
+StudentUI --> StudentService
+StudentUI --> ConsoleIO
+ScoreUI --> ScoreService
+ScoreUI --> ConsoleIO
+StatisticsUI --> StatisticsService
+StatisticsUI --> ConsoleIO
+WarningUI --> WarningService
+WarningUI --> ConsoleIO
+AccountUI --> AuthService
+AccountUI --> ConsoleIO
+
+note right of MenuFactory
+  可能成为上帝类；
+  第 2 轮可评估拆分为
+  AdminMenuFactory / TeacherMenuFactory。
+end note
+
+note bottom of ConsoleIO
+  UI 只做输入格式校验与结果打印；
+  业务校验在 service。
+end note
+
+note bottom of TablePrinter
+  分页在 UI 层：service 返回完整列表，
+  TablePrinter 按 page/pageSize 切片。
+  先过滤、排序，再分页；每页默认 10 条。
+end note
+
+@enduml
