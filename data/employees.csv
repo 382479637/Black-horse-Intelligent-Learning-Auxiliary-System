@@ -1,6 +1,6 @@
 id,username,passwordHash,passwordSalt,name,gender,phone,email,departmentId,role,status,hireDate
-1,admin,nvSpBzgLW0MQlWTCEWsZfe8+US6x88atxLLqcoqLW5M=,4RT0f2Qzwn40c7Xv6wLTfQ==,系统管理员,UNKNOWN,,,1,ADMIN,ACTIVE,2024-01-01
-2,t01,CiYt6AN+G2Dv9EnDKsynXt1tvCEIbcnLphEyqeYnykg=,rSPBHCkryIiRyRHqPF0S1g==,张伟,MALE,13800000001,zhangwei@example.com,2,TEACHER,ACTIVE,2024-02-20
-3,t02,rEEEEthHIMffEzkqe4L6oJ0psB80s/Mibt6jXHbvxbo=,5o6MgRvrRU+0rRmbkBTCwQ==,李娜,FEMALE,13800000002,lina@example.com,2,TEACHER,ACTIVE,2024-03-05
-4,t03,hpVLiEqFYq12mW+pqFNEhZCTTdr2/yLB3LAWaPemufs=,aPQ6V4mIPMsKDlngxx1NxQ==,王强,MALE,13800000003,wangqiang@example.com,3,TEACHER,ACTIVE,2024-03-10
-5,t04,Ncdnfme7fPuZquQK5/6pGdhrtKCI2zez6quENFC6eWQ=,aBCAh1WhhpvOfuLkp2PdWg==,刘洋,MALE,13800000004,liuyang@example.com,2,TEACHER,ACTIVE,2024-08-25
+1,admin,0BIFhx+jKrAAwssmehs/xDvRBRcpGcwC7ryqhAVCWBA=,PlJOH5kBfVHPJ1e+xCe0Hg==,系统管理员,UNKNOWN,,,1,ADMIN,ACTIVE,2024-01-01
+2,t01,gD+c0nPW1OMD+NGFcZxS2YOuIwIonubg15mlS5MNDw4=,gCjprtNkSbGsyNxEqwLlKA==,张伟,MALE,13800000001,zhangwei@example.com,2,TEACHER,ACTIVE,2024-02-20
+3,t02,0wWHZahmlugnjcqeOTq3aQ7lyRf5wr2+17ygMuVXAic=,Myp2KtkW6fR7SVr62AWAxw==,李娜,FEMALE,13800000002,lina@example.com,2,TEACHER,ACTIVE,2024-03-05
+4,t03,fRTK8TmWasIjVelyCcTiIvO4YNBq+33DSyHcOn/+ps0=,TIgnKWmnDEKUFEuh4cbtpg==,王强,MALE,13800000003,wangqiang@example.com,3,TEACHER,ACTIVE,2024-03-10
+5,t04,hf0E0cmE1SO2eV+R/Qo4kvQlpypzBcrVVZ9B625vzgo=,/AQJQflTRAnQqy7nTHcRzw==,刘洋,MALE,13800000004,liuyang@example.com,2,TEACHER,ACTIVE,2024-08-25

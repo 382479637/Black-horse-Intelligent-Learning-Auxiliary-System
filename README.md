@@ -21,6 +21,20 @@ java -jar target/learning-assistant.jar
 > Windows 控制台若出现中文乱码，请先执行 `chcp 65001` 并确认终端字体支持中文；
 > 程序会优先使用控制台自身字符集读取输入，输出使用终端编码。
 
+## 一键启动（Windows）
+
+项目根目录提供两个文件，双击即可运行（自动定位 JDK 21、jar 不存在时自动构建、自动切到 UTF-8 控制台）：
+
+| 文件 | 用途 |
+|---|---|
+| `启动项目.lnk` | 快捷方式，双击启动（工作目录已指向项目根，图标为 Java） |
+| `启动项目.cmd` | 实际脚本，可直接编辑；也可在命令行执行 `启动项目.cmd` |
+
+脚本默认假定 JDK 21 在 `D:\dev\jdk21-current`、Maven 在 `D:\dev\apache-maven-3.9.16`；
+换机器时只改脚本开头的 `JAVA_HOME` 与 `mvn.cmd` 路径即可，其余逻辑不用动。
+
+> 注意：`target/` 与 `data/load-errors.log` 已在 `.gitignore` 中忽略，构建与运行不会污染提交内容。
+
 ## 首次运行与演示账号
 
 首次启动（`data/` 下 7 个 CSV 均无数据行）会写入演示数据：
